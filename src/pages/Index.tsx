@@ -1,79 +1,114 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 import { Session } from "@supabase/supabase-js";
-import BookUpload from "@/components/BookUpload";
-import BookList from "@/components/BookList";
-import { LogOut, BookOpen } from "lucide-react";
 import { toast } from "sonner";
+import Header from "@/components/Header";
+import HeroSection from "@/components/HeroSection";
+import BooksView from "@/components/BooksView";
+import SubmitView from "@/components/SubmitView";
+import AuthModal from "@/components/AuthModal";
 
 const Index = () => {
-  const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
+  const [currentView, setCurrentView] = useState('home');
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      if (!session) {
-        navigate("/auth");
-      }
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      if (!session) {
-        navigate("/auth");
-      }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, []);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     toast.success("Signed out successfully");
+    setCurrentView('home');
   };
 
   const handleUploadComplete = () => {
     setRefreshTrigger(prev => prev + 1);
+    setCurrentView('books');
   };
 
-  if (!session) {
-    return null;
-  }
+  const handleNavigate = (view: string) => {
+    if (['books', 'profiles', 'submit'].includes(view) && !session) {
+      toast.error("Please sign in to access this page");
+      setAuthMode('login');
+      setAuthModalOpen(true);
+      return;
+    }
+    setCurrentView(view);
+  };
+
+  const handleOpenAuth = (mode: 'login' | 'signup') => {
+    setAuthMode(mode);
+    setAuthModalOpen(true);
+  };
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <BookOpen className="h-6 w-6 text-primary" />
-            <h1 className="text-2xl font-bold">TextAssess</h1>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">
-              {session.user.email}
-            </span>
-            <Button onClick={handleSignOut} variant="outline" size="sm">
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
-            </Button>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-white flex flex-col">
+      <Header 
+        session={session}
+        currentView={currentView}
+        onNavigate={handleNavigate}
+        onSignOut={handleSignOut}
+        onOpenAuth={handleOpenAuth}
+      />
 
-      <main className="container mx-auto px-4 py-8 space-y-8">
-        <div className="max-w-2xl mx-auto">
-          <BookUpload onUploadComplete={handleUploadComplete} />
-        </div>
+      <main className="flex-1 max-w-[1200px] mx-auto my-7 px-4 w-full">
+        {currentView === 'home' && <HeroSection />}
+        
+        {currentView === 'books' && session && (
+          <BooksView refreshTrigger={refreshTrigger} />
+        )}
+        
+        {currentView === 'submit' && session && (
+          <SubmitView onUploadComplete={handleUploadComplete} />
+        )}
 
-        <div>
-          <h2 className="text-2xl font-bold mb-6">Book Library</h2>
-          <BookList refreshTrigger={refreshTrigger} />
-        </div>
+        {currentView === 'about' && (
+          <div className="border border-border rounded-[10px] p-3.5 bg-white">
+            <h3 className="text-2xl font-bold mb-3">About TextAssess</h3>
+            <p className="text-muted-foreground">
+              TextAssess is a professional platform to collect textbook reviews from educators and students. 
+              It helps institutions select suitable textbooks and allows users to contact reviewers for 
+              clarification or collaboration.
+            </p>
+          </div>
+        )}
+
+        {currentView === 'contact' && (
+          <div className="border border-border rounded-[10px] p-3.5 bg-white">
+            <h3 className="text-2xl font-bold mb-3">Contact</h3>
+            <p className="text-muted-foreground mb-4">
+              For queries about the app, reach out through the form below.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Contact form integration coming soon. For now, please use the platform features to communicate with other users.
+            </p>
+          </div>
+        )}
       </main>
+
+      <footer className="bg-[hsl(var(--academic-beige))] border-t border-border py-3 px-5 mt-auto">
+        <div className="max-w-[1200px] mx-auto text-center text-sm text-muted-foreground">
+          © 2025 TextAssess. A platform for textbook quality assessment.
+        </div>
+      </footer>
+
+      <AuthModal 
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        mode={authMode}
+      />
     </div>
   );
 };
