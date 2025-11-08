@@ -16,6 +16,10 @@ const AuthModal = ({ isOpen, onClose, mode: initialMode }: AuthModalProps) => {
   const [mode, setMode] = useState<'login' | 'signup'>(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [institution, setInstitution] = useState("");
+  const [role, setRole] = useState<'student' | 'teacher'>('student');
   const [loading, setLoading] = useState(false);
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -33,7 +37,7 @@ const AuthModal = ({ isOpen, onClose, mode: initialMode }: AuthModalProps) => {
         onClose();
       } else {
         const redirectUrl = `${window.location.origin}/`;
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -41,6 +45,31 @@ const AuthModal = ({ isOpen, onClose, mode: initialMode }: AuthModalProps) => {
           },
         });
         if (error) throw error;
+        
+        // Create profile and role after signup
+        if (data.user) {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert({
+              user_id: data.user.id,
+              full_name: fullName,
+              email: email,
+              phone: phone || null,
+              institution: institution || null,
+            });
+          
+          if (profileError) throw profileError;
+          
+          const { error: roleError } = await supabase
+            .from('user_roles')
+            .insert({
+              user_id: data.user.id,
+              role: role,
+            });
+          
+          if (roleError) throw roleError;
+        }
+        
         toast.success("Account created successfully!");
         onClose();
       }
@@ -62,6 +91,36 @@ const AuthModal = ({ isOpen, onClose, mode: initialMode }: AuthModalProps) => {
         </DialogHeader>
         
         <form onSubmit={handleAuth} className="space-y-4">
+          {mode === 'signup' && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="fullName">Full Name</Label>
+                <Input
+                  id="fullName"
+                  type="text"
+                  placeholder="John Doe"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="role">I am a</Label>
+                <select
+                  id="role"
+                  className="w-full px-3 py-2 border border-border rounded-md bg-background"
+                  value={role}
+                  onChange={(e) => setRole(e.target.value as 'student' | 'teacher')}
+                  required
+                >
+                  <option value="student">Student</option>
+                  <option value="teacher">Teacher</option>
+                </select>
+              </div>
+            </>
+          )}
+          
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -86,6 +145,32 @@ const AuthModal = ({ isOpen, onClose, mode: initialMode }: AuthModalProps) => {
               minLength={6}
             />
           </div>
+          
+          {mode === 'signup' && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone (optional)</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="+1234567890"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="institution">Institution (optional)</Label>
+                <Input
+                  id="institution"
+                  type="text"
+                  placeholder="University name"
+                  value={institution}
+                  onChange={(e) => setInstitution(e.target.value)}
+                />
+              </div>
+            </>
+          )}
           
           <Button 
             type="submit" 

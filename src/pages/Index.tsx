@@ -7,6 +7,8 @@ import HeroSection from "@/components/HeroSection";
 import BooksView from "@/components/BooksView";
 import SubmitView from "@/components/SubmitView";
 import AuthModal from "@/components/AuthModal";
+import ProfileDashboard from "@/components/ProfileDashboard";
+import AdminBooksView from "@/components/AdminBooksView";
 
 const Index = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -14,18 +16,36 @@ const Index = () => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      if (session) {
+        checkAdminStatus(session.user.id);
+      }
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+      if (session) {
+        checkAdminStatus(session.user.id);
+      }
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const checkAdminStatus = async (userId: string) => {
+    const { data } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId)
+      .eq('role', 'admin')
+      .single();
+    
+    setIsAdmin(!!data);
+  };
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -39,7 +59,7 @@ const Index = () => {
   };
 
   const handleNavigate = (view: string) => {
-    if (['books', 'profiles', 'submit'].includes(view) && !session) {
+    if (['books', 'submit', 'profiles'].includes(view) && !session) {
       toast.error("Please sign in to access this page");
       setAuthMode('login');
       setAuthModalOpen(true);
@@ -67,11 +87,19 @@ const Index = () => {
         {currentView === 'home' && <HeroSection />}
         
         {currentView === 'books' && session && (
-          <BooksView refreshTrigger={refreshTrigger} />
+          isAdmin ? (
+            <AdminBooksView refreshTrigger={refreshTrigger} />
+          ) : (
+            <BooksView refreshTrigger={refreshTrigger} />
+          )
         )}
         
         {currentView === 'submit' && session && (
           <SubmitView onUploadComplete={handleUploadComplete} />
+        )}
+        
+        {currentView === 'profiles' && session && (
+          <ProfileDashboard />
         )}
 
         {currentView === 'about' && (
