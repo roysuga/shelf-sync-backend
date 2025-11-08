@@ -8,9 +8,10 @@ interface HeaderProps {
   onNavigate: (view: string) => void;
   onSignOut: () => void;
   onOpenAuth: (mode: 'login' | 'signup') => void;
+  isAdmin?: boolean;
 }
 
-const Header = ({ session, currentView, onNavigate, onSignOut, onOpenAuth }: HeaderProps) => {
+const Header = ({ session, currentView, onNavigate, onSignOut, onOpenAuth, isAdmin }: HeaderProps) => {
   const navItems = [
     { id: 'home', label: 'Home', public: true },
     { id: 'books', label: 'Books', public: false },
@@ -19,6 +20,8 @@ const Header = ({ session, currentView, onNavigate, onSignOut, onOpenAuth }: Hea
     { id: 'about', label: 'About', public: true },
     { id: 'contact', label: 'Contact', public: true },
   ];
+  
+  const adminNavItem = { id: 'admin', label: 'Admin', public: false };
 
   return (
     <header className="bg-[hsl(var(--academic-beige))] border-b border-border">
@@ -43,6 +46,14 @@ const Header = ({ session, currentView, onNavigate, onSignOut, onOpenAuth }: Hea
               </a>
             )
           ))}
+          {isAdmin && session && (
+            <a
+              onClick={() => onNavigate('admin')}
+              className="text-[#1f2937] hover:text-[hsl(var(--academic-accent))] cursor-pointer transition-colors font-semibold"
+            >
+              🛡️ Admin
+            </a>
+          )}
         </nav>
 
         <div className="flex items-center gap-2 min-w-[160px] justify-end">

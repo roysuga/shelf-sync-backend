@@ -9,6 +9,7 @@ import SubmitView from "@/components/SubmitView";
 import AuthModal from "@/components/AuthModal";
 import ProfileDashboard from "@/components/ProfileDashboard";
 import AdminBooksView from "@/components/AdminBooksView";
+import AdminRolesPanel from "@/components/AdminRolesPanel";
 
 const Index = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -59,12 +60,18 @@ const Index = () => {
   };
 
   const handleNavigate = (view: string) => {
-    if (['books', 'submit', 'profiles'].includes(view) && !session) {
+    if (['books', 'submit', 'profiles', 'admin'].includes(view) && !session) {
       toast.error("Please sign in to access this page");
       setAuthMode('login');
       setAuthModalOpen(true);
       return;
     }
+    
+    if (view === 'admin' && !isAdmin) {
+      toast.error("Only admins can access this page");
+      return;
+    }
+    
     setCurrentView(view);
   };
 
@@ -81,6 +88,7 @@ const Index = () => {
         onNavigate={handleNavigate}
         onSignOut={handleSignOut}
         onOpenAuth={handleOpenAuth}
+        isAdmin={isAdmin}
       />
 
       <main className="flex-1 max-w-[1200px] mx-auto my-7 px-4 w-full">
@@ -100,6 +108,10 @@ const Index = () => {
         
         {currentView === 'profiles' && session && (
           <ProfileDashboard />
+        )}
+        
+        {currentView === 'admin' && session && isAdmin && (
+          <AdminRolesPanel />
         )}
 
         {currentView === 'about' && (
