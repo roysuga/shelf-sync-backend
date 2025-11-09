@@ -10,6 +10,7 @@ import AuthModal from "@/components/AuthModal";
 import ProfileDashboard from "@/components/ProfileDashboard";
 import AdminBooksView from "@/components/AdminBooksView";
 import AdminRolesPanel from "@/components/AdminRolesPanel";
+import MessagesView from "@/components/MessagesView";
 
 const Index = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -60,7 +61,7 @@ const Index = () => {
   };
 
   const handleNavigate = (view: string) => {
-    if (['books', 'submit', 'profiles', 'admin'].includes(view) && !session) {
+    if (['books', 'submit', 'profiles', 'admin', 'messages'].includes(view) && !session) {
       toast.error("Please sign in to access this page");
       setAuthMode('login');
       setAuthModalOpen(true);
@@ -112,6 +113,10 @@ const Index = () => {
         
         {currentView === 'admin' && session && isAdmin && (
           <AdminRolesPanel />
+        )}
+        
+        {currentView === 'messages' && session && (
+          <MessagesView />
         )}
 
         {currentView === 'about' && (

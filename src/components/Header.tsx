@@ -1,6 +1,9 @@
+import { useState, useEffect } from "react";
 import { Session } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { BookOpen, LogOut } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { BookOpen, LogOut, Mail } from "lucide-react";
 
 interface HeaderProps {
   session: Session | null;
@@ -12,6 +15,35 @@ interface HeaderProps {
 }
 
 const Header = ({ session, currentView, onNavigate, onSignOut, onOpenAuth, isAdmin }: HeaderProps) => {
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (session) {
+      fetchUnreadCount();
+      const interval = setInterval(fetchUnreadCount, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [session]);
+
+  const fetchUnreadCount = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("messages")
+        .select("id", { count: "exact" })
+        .eq("recipient_id", user.id)
+        .eq("is_read", false);
+
+      if (!error && data) {
+        setUnreadCount(data.length);
+      }
+    } catch (error) {
+      console.error("Error fetching unread count:", error);
+    }
+  };
+
   const navItems = [
     { id: 'home', label: 'Home', public: true },
     { id: 'books', label: 'Books', public: false },
@@ -46,6 +78,23 @@ const Header = ({ session, currentView, onNavigate, onSignOut, onOpenAuth, isAdm
               </a>
             )
           ))}
+          {session && (
+            <a
+              onClick={() => onNavigate('messages')}
+              className="text-[#1f2937] hover:text-[hsl(var(--academic-accent))] cursor-pointer transition-colors relative inline-flex items-center gap-1"
+            >
+              <Mail className="h-4 w-4" />
+              Messages
+              {unreadCount > 0 && (
+                <Badge 
+                  variant="destructive" 
+                  className="h-5 min-w-5 flex items-center justify-center p-1 text-xs"
+                >
+                  {unreadCount}
+                </Badge>
+              )}
+            </a>
+          )}
           {isAdmin && session && (
             <a
               onClick={() => onNavigate('admin')}
