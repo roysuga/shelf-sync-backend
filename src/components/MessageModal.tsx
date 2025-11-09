@@ -145,10 +145,9 @@ const MessageModal = ({ isOpen, onClose, bookId, recipientId }: MessageModalProp
             <Label htmlFor="book">Regarding Book (Optional)</Label>
             <Select value={selectedBook} onValueChange={setSelectedBook}>
               <SelectTrigger id="book">
-                <SelectValue placeholder="Select a book (optional)" />
+                <SelectValue placeholder="No book selected" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No book selected</SelectItem>
                 {books.map((book) => (
                   <SelectItem key={book.id} value={book.id}>
                     {book.title}
