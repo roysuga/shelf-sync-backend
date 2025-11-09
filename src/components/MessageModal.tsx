@@ -41,32 +41,16 @@ interface Book {
 const MessageModal = ({ isOpen, onClose, bookId, recipientId }: MessageModalProps) => {
   const [subject, setSubject] = useState("");
   const [content, setContent] = useState("");
-  const [selectedRecipient, setSelectedRecipient] = useState(recipientId || "");
+  const [recipientEmail, setRecipientEmail] = useState("");
   const [selectedBook, setSelectedBook] = useState(bookId || "");
   const [loading, setLoading] = useState(false);
-  const [profiles, setProfiles] = useState<Profile[]>([]);
   const [books, setBooks] = useState<Book[]>([]);
 
   useEffect(() => {
     if (isOpen) {
-      fetchProfiles();
       fetchBooks();
     }
   }, [isOpen]);
-
-  const fetchProfiles = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, user_id, full_name, email")
-        .order("full_name");
-
-      if (error) throw error;
-      setProfiles(data || []);
-    } catch (error) {
-      console.error("Error fetching profiles:", error);
-    }
-  };
 
   const fetchBooks = async () => {
     try {
@@ -83,7 +67,7 @@ const MessageModal = ({ isOpen, onClose, bookId, recipientId }: MessageModalProp
   };
 
   const handleSend = async () => {
-    if (!selectedRecipient || !subject.trim() || !content.trim()) {
+    if (!recipientEmail.trim() || !subject.trim() || !content.trim()) {
       toast.error("Please fill in all required fields");
       return;
     }
@@ -93,9 +77,28 @@ const MessageModal = ({ isOpen, onClose, bookId, recipientId }: MessageModalProp
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
+      // Look up recipient by email
+      const { data: recipientProfile, error: profileError } = await supabase
+        .from("profiles")
+        .select("user_id")
+        .eq("email", recipientEmail.trim().toLowerCase())
+        .single();
+
+      if (profileError || !recipientProfile) {
+        toast.error("User with this email not found");
+        setLoading(false);
+        return;
+      }
+
+      if (recipientProfile.user_id === user.id) {
+        toast.error("You cannot send a message to yourself");
+        setLoading(false);
+        return;
+      }
+
       const { error } = await supabase.from("messages").insert({
         sender_id: user.id,
-        recipient_id: selectedRecipient,
+        recipient_id: recipientProfile.user_id,
         book_id: selectedBook || null,
         subject: subject.trim(),
         content: content.trim(),
@@ -106,7 +109,7 @@ const MessageModal = ({ isOpen, onClose, bookId, recipientId }: MessageModalProp
       toast.success("Message sent successfully");
       setSubject("");
       setContent("");
-      setSelectedRecipient("");
+      setRecipientEmail("");
       setSelectedBook("");
       onClose();
     } catch (error) {
@@ -126,19 +129,18 @@ const MessageModal = ({ isOpen, onClose, bookId, recipientId }: MessageModalProp
 
         <div className="space-y-4">
           <div>
-            <Label htmlFor="recipient">To *</Label>
-            <Select value={selectedRecipient} onValueChange={setSelectedRecipient}>
-              <SelectTrigger id="recipient">
-                <SelectValue placeholder="Select recipient" />
-              </SelectTrigger>
-              <SelectContent>
-                {profiles.map((profile) => (
-                  <SelectItem key={profile.user_id} value={profile.user_id}>
-                    {profile.full_name} ({profile.email})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label htmlFor="recipient">Recipient Email *</Label>
+            <Input
+              id="recipient"
+              type="email"
+              value={recipientEmail}
+              onChange={(e) => setRecipientEmail(e.target.value)}
+              placeholder="Enter recipient's email address"
+              maxLength={255}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Enter the email address of the user you want to message
+            </p>
           </div>
 
           <div>
