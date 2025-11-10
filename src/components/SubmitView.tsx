@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Upload } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ReviewsView from "@/components/ReviewsView";
 
 interface SubmitViewProps {
   onUploadComplete: () => void;
@@ -94,7 +96,14 @@ const SubmitView = ({ onUploadComplete }: SubmitViewProps) => {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <Tabs defaultValue="submit" className="w-full">
+      <TabsList className="mb-4">
+        <TabsTrigger value="submit">Submit Book</TabsTrigger>
+        <TabsTrigger value="reviews">Reviews</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="submit">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       <div className="border border-border rounded-[10px] p-3.5 bg-white">
         <h5 className="text-lg font-semibold mb-3">Submit a textbook</h5>
         <form id="bookSubmitForm" onSubmit={handleSubmit} className="space-y-3">
@@ -204,6 +213,12 @@ const SubmitView = ({ onUploadComplete }: SubmitViewProps) => {
         </div>
       </div>
     </div>
+      </TabsContent>
+
+      <TabsContent value="reviews">
+        <ReviewsView />
+      </TabsContent>
+    </Tabs>
   );
 };
 
