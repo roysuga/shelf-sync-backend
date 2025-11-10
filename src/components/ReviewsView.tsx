@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Star } from "lucide-react";
+import { Star, Trash2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -38,6 +38,7 @@ const ReviewsView = () => {
   const [reviewText, setReviewText] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [myReviews, setMyReviews] = useState<Review[]>([]);
+  const [deletingReviewId, setDeletingReviewId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchBooks();
@@ -124,6 +125,30 @@ const ReviewsView = () => {
     }
   };
 
+  const handleDeleteReview = async (reviewId: string) => {
+    if (!confirm("Are you sure you want to delete this review?")) {
+      return;
+    }
+
+    setDeletingReviewId(reviewId);
+
+    try {
+      const { error } = await supabase
+        .from("reviews")
+        .delete()
+        .eq("id", reviewId);
+
+      if (error) throw error;
+
+      toast.success("Review deleted successfully!");
+      fetchMyReviews();
+    } catch (error: any) {
+      toast.error(error.message || "Error deleting review");
+    } finally {
+      setDeletingReviewId(null);
+    }
+  };
+
   const renderStars = (currentRating: number, interactive: boolean = false) => {
     return (
       <div className="flex gap-1">
@@ -203,13 +228,24 @@ const ReviewsView = () => {
                 key={review.id}
                 className="border border-border rounded-md p-3 space-y-2"
               >
-                <div>
-                  <p className="font-medium text-sm">
-                    {review.books.title}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    by {review.books.author}
-                  </p>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="font-medium text-sm">
+                      {review.books.title}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      by {review.books.author}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleDeleteReview(review.id)}
+                    disabled={deletingReviewId === review.id}
+                    className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
                 {renderStars(review.rating)}
                 {review.review_text && (
